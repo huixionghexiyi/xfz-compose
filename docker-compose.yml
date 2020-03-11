@@ -1,0 +1,79 @@
+version: "3"
+
+# 声明两个卷
+volumes:
+  media:
+  static:
+  database:
+
+# 声明一个网络
+
+networks:
+  xfz-network:
+# 服务
+services:
+  # 小饭桌
+  xfz:
+    build:
+      context: . # 上下文指定为docker-compose.yml所在的文件夹
+      dockerfile: django/Dockerfile # dockerfile所在的路径(相对路径和绝对路径都可以)
+    image: hx-xfz # 生成的image的名字
+    container_name: hx-xfz # 生成的容器的名字
+    working_dir: /app # Dockerfile的工作路径
+    volumes: # 将静态文件映射到static卷中
+      - static:/app/static
+      - media:/app/media
+      - /data/xfzProject:/app/
+    #  env_file: # 在创建容器的时候配置的环境变量, 将铭感数据放到这里面，容器加载时加载
+    #   - .envs/.production
+    ports: # 端口映射
+      - "8000:8000"
+    depends_on: # 需要以下两个容器启动再启动这个
+      - db
+      - memcached
+    # expose:
+    #   - "8000"
+    networks:
+      - xfz-network
+    command: /start.sh # 最后执行的命令相当于CMD
+
+  # nginx服务
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    image: hx-nginx
+    container_name: hx-nginx
+    volumes:
+      - static:/app/static
+      - media:/app/media
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - xfz-network
+    depends_on:
+      - xfz
+  # 数据库
+  db:
+    image: mysql
+    container_name: hx-mysql
+    environment:
+      MYSQL_DATABASE: "xfz"
+      MYSQL_ROOT_PASSWORD: "123456"
+    restart: always
+    volumes:
+      - /data/mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - xfz-network
+  # memcached
+  memcached:
+    image: memcached
+    container_name: hx-memcached
+    restart: always
+    ports:
+      - "11211:11211"
+    networks:
+      - xfz-network

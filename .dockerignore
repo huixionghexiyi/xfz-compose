@@ -1,0 +1,9 @@
+.vscode
+*/*/node_modules
+media/*
+whoosh_index
+static
+log
+doc
+Pipfile*
+README.md
